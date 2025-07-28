@@ -1,0 +1,180 @@
+-- This line loads the Pandora UI library directly from your GitHub repository.
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/MaybeItIsVay/pandora/main/Source"))()
+
+if not Library then
+    warn("Failed to load Pandora library from GitHub. Please check the URL and your internet connection.")
+    return
+end
+
+-- Local Variables
+local Flags = Library.Flags
+local Pointers = Library.Pointers
+local Utility = Library.Utility
+
+-- Example Window
+local window = Library:Window({
+    Name = "lunar.vip"
+})
+
+local page = window:Page({
+    Name = "combat";
+    Icon = ""; -- insert tab icon here
+})
+
+local left_section = page:Section({
+    Name = "Left Section";
+    Side = "Left"
+})
+
+left_section:Toggle({
+    Name = "Toggle"; 
+    State = false; 
+    Flag = "Toggle_Flag";
+    Callback = function(Bool)
+        print(Bool)
+    end 
+})
+
+left_section:Keybind({
+    Flag = "Keybind";
+    Default = Enum.KeyCode.E;
+    Callback = function()
+        print("keybind pressed")
+    end 
+})
+
+left_section:Slider({
+    Name = "Slider", 
+    Min = 0, 
+    Max = 100,
+    Default = 10, 
+    Decimals = 1, 
+    Suffix = "°", 
+    Flag = "slider flag";
+    Callback = function(Int)
+        print("Slider set to" .. Int)
+    end 
+})
+
+left_section:List({
+    Name = "Dropdown", 
+    Options = {"head", "hrp", "arms", "feet", "legs", "torso"}, 
+    Default = "hrp", 
+    Max = 1, 
+    Flag = "aim_assist_bone",
+    Callback = function(Option)
+        print("option:" .. Option)
+    end 
+})
+
+left_section:Multibox({
+    Name = "Multi Dropdown", 
+    Options = {"1", "2", "3"},
+    Default = {"1"}, 
+    Max = 9e9, 
+    Flag = "dropdown flag",
+    Callback = function(Option)
+        table.foreach(Option, print)
+    end 
+})
+
+left_section:Textbox({
+    Name = "Textbox", 
+    Flag = "aim_assist_prediction",
+    Placeholder = "Textbox placeholder text",
+    Callback = function(Text)
+        print(Text)
+    end
+})
+
+left_section:Colorpicker({
+    Name = "Textbox", 
+    Flag = "color flag",
+    Alpha = 1,
+    Callback = function(Bool)
+        print(Bool)
+    end 
+})
+
+-- Config page example
+do -- Settings
+    local settings = window:Page({
+        Name = "Settings"
+    })
+    -- 
+    local CFG = settings:Section({Name = "Config", Zindex = 2})
+    --
+    local ConfigList = CFG:List({Name = "Config", Flag = "SettingConfigurationList", Options = {}})
+    CFG:Textbox({Flag = "SettingsConfigurationName", Name = "Config Name"})
+    --
+    local CurrentList = {};
+    local function UpdateConfigList()
+        -- NOTE: This part requires you have functions like `listfiles`, `writefile`, etc.
+        -- in your environment. If not, these buttons will cause errors.
+        if not listfiles then return end
+        
+        local List = {};
+        for idx, file in ipairs(listfiles("Lunar/Configs")) do
+            local FileName = file:gsub("Lunar/Configs\\", ""):gsub(".cfg", "")
+            List[#List + 1] = FileName;
+        end;
+
+        local IsNew = #List ~= #CurrentList
+        if not IsNew then
+            for idx, file in ipairs(List) do
+                if file ~= CurrentList[idx] then
+                    IsNew = true;
+                    break;
+                end;
+            end;
+        end;
+
+        if IsNew then
+            CurrentList = List;
+            ConfigList:Refresh(CurrentList);
+        end;
+    end;
+    --
+    CFG:Button({Name = "Create", Callback = function()
+        local Success, Error = pcall(function()
+            local ConfigName = Flags.SettingsConfigurationName;
+            if ConfigName == "" or isfile("Lunar/Configs/" .. ConfigName .. ".cfg") then
+                return;
+            end;
+            writefile("Lunar/Configs/" .. ConfigName .. ".cfg", "");
+            UpdateConfigList();
+        end)
+    end})
+    CFG:Button({Name = "Save", Callback = function()
+        local Success, Error = pcall(function()
+            local SelectedConfig = Flags.SettingConfigurationList;
+            if SelectedConfig then
+                writefile("Lunar/Configs/" .. SelectedConfig .. ".cfg", Library:GetConfig())
+            end;
+        end);
+    end})
+    CFG:Button({Name = "Load", Callback = function()
+        local Success, Error = pcall(function()
+            local SelectedConfig = Flags.SettingConfigurationList;
+            if SelectedConfig then
+                Library:LoadConfig(readfile("Lunar/Configs/" .. SelectedConfig .. ".cfg"))
+            end
+        end)
+    end})
+    CFG:Button({Name = "Delete", Callback = function()
+        local SelectedConfig = Flags.SettingConfigurationList;
+        if SelectedConfig then
+            delfile("Lunar/Configs/" .. SelectedConfig .. ".cfg")
+        end
+        UpdateConfigList();
+    end})
+    CFG:Button({Name = "Refresh",Callback = function()
+        UpdateConfigList();
+    end})
+    --
+    CFG:Keybind({Name = "Menu Key", Flag = "MenuKey", UseKey = true, Default = Enum.KeyCode.End, Callback = function(State) Library.UIKey = State end})
+    CFG:Colorpicker({Name = "Menu Accent", Flag = "MenuAccent", Default = Library.Accent, Callback = function(State) Library:ChangeAccent(State) end})
+    
+    -- Initial call to populate the list if the functions exist
+    pcall(UpdateConfigList)
+end
